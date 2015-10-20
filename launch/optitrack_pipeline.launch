@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<launch>
+  
+  <!-- Define the transformation between optitrack and the world -->
+  <node name="world_tf_publisher" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 -1.570796 world optitrack 60" />
+  
+  <!-- Publish optitrack rigid bodies. Both in TF and as a PoseArray msg -->
+  <node name="rigid_bodies_publisher" pkg="optitrack" type="rigid_bodies_publisher.py" output="screen">
+    <rosparam file="$(find optitrack)/config/rigid_bodies.yaml" command="load" />
+    <param name="iface"  type="string" value="eth0" />
+  </node>
+  
+  <!-- RVIZ -->
+  <node name="rviz_node" pkg="rviz" type="rviz" args="-d $(find optitrack)/config/optitrack.rviz" />
+  
+</launch>

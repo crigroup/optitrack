@@ -1,0 +1,8 @@
+parent_frame: world
+optitrack_frame: optitrack
+# Rate in Hz
+tf_publish_rate: 50.
+
+# Mapping between rigid body ID and name to be use in TF
+rigid_bodies:
+  table: 2
