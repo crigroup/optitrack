@@ -63,7 +63,7 @@ $ source ~/catkin_ws/devel/setup.bash
 ``` 
 You might want to add that line to your `~/.bashrc`
 
-Try the following commands (one per terminal) to start a joint trajectory example:
+Try the following commands (one per terminal):
 ```
 $ roslaunch optitrack optitrack_pipeline.launch
 $ rostopic echo /optitrack/rigid_bodies
