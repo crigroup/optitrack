@@ -8,11 +8,15 @@ ROS package developed by the [Control Robotics Intelligence Group](http://www.nt
   * Motive 1.7.5 running on Windows 7, 64 bits.
   * ROS Hydro (Ubuntu 12.04, 64 bits)
 
-**Maintainer:** Francisco Suárez Ruiz, [http://www.romin.upm.es/fsuarez/](http://www.romin.upm.es/fsuarez/)
+**Maintainer:** Francisco Suárez Ruiz, [fsuarez6.github.io](fsuarez6.github.io)
 
 ### Documentation
   * See the installation instructions below.
   * Throughout the various files in this repository.
+  
+### Build Status
+
+[![Build Status](https://travis-ci.org/crigroup/optitrack.png?branch=hydro-devel)](https://travis-ci.org/crigroup/optitrack)
 
 ## Installation
 
@@ -31,7 +35,7 @@ $ sudo apt-get install ros-hydro-ros-base
 ``` 
   2. Install the `python-optrix` library:
 ```
-$ sudo pip install optirx
+$ pip install optirx --user
 ``` 
 
 ### Repository Installation
