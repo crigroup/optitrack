@@ -17,9 +17,8 @@ def get_ip_address(ifname):
   """
   Get the ip address from the specified interface.
     
-    >>> from denso_openrave.utils import get_ip_address
     >>> get_ip_address('eth0')
-    '169.254.100.10'
+    '192.168.0.7'
     
   @type ifname: string
   @param ifname: The interface name. Typical names are C{'eth0'}, 
@@ -73,7 +72,9 @@ class RigidBodiesPublisher(object):
       try:
         data = self._optitrack.recv(rx.MAX_PACKETSIZE)
       except socket.error:
-        if not rospy.is_shutdown():
+        if rospy.is_shutdown():
+          return    # exit gracefully
+        else:
           rospy.logwarn('Failed to receive packet from optitrack')
       packet = rx.unpack(data, version=version)
       if type(packet) is rx.SenderData:
@@ -130,5 +131,3 @@ if __name__ == '__main__':
   rospy.loginfo('Starting [%s] node' % node_name)
   opti_node = RigidBodiesPublisher()
   rospy.loginfo('Shuting down [%s] node' % node_name)
-
-
