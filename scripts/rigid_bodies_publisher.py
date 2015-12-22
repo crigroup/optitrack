@@ -56,7 +56,7 @@ class RigidBodiesPublisher(object):
     rigid_bodies = read_parameter('~rigid_bodies', dict())
     mapped_ids = rigid_bodies.values()
     # Setup Publishers
-    pose_pub = rospy.Publisher('/optitrack/rigid_bodies', RigidBodyArray)
+    pose_pub = rospy.Publisher('/optitrack/rigid_bodies', RigidBodyArray, queue_size=3)
     # Setup TF listener and broadcaster
     tf_listener = tf.TransformListener()
     tf_broadcaster = tf.TransformBroadcaster()
