@@ -5,4 +5,11 @@ tf_publish_rate: 50.
 
 # Mapping between rigid body ID and name to be use in TF
 rigid_bodies:
-  table: 2
+  bstick:
+    id: 2
+    markers:
+      - [22.378,  -0.158,   -10.189]
+      - [-25.409, 114.359,  2.920]
+      - [13.729,  114.186,  2.757]
+      - [-24.982, -114.268, 2.381]
+      - [14.284,  -114.119, 2.131]

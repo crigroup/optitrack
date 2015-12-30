@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 import rospy, os
 import numpy as np
-# Streaming
+# Optitrack
 import optirx as rx
-import socket, fcntl, struct
+from optitrack.utils import get_ip_address, read_parameter
 # Transformations
 import tf
 import tf.transformations as tr
@@ -13,40 +13,6 @@ from geometry_msgs.msg import Pose, Point, Quaternion
 from optitrack.msg import RigidBody, RigidBodyArray
 
 
-def get_ip_address(ifname):
-  """
-  Get the ip address from the specified interface.
-    
-    >>> get_ip_address('eth0')
-    '192.168.0.7'
-    
-  @type ifname: string
-  @param ifname: The interface name. Typical names are C{'eth0'}, 
-  C{'wlan0'}, etc.
-  @rtype: string
-  @return: The IP address of the specified interface.
-  """
-  s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-  return socket.inet_ntoa(fcntl.ioctl(
-      s.fileno(),
-      0x8915,  # SIOCGIFADDR
-      struct.pack('256s', ifname[:15]))[20:24])
-
-def read_parameter(name, default):
-  """
-  Get a parameter from the ROS parameter server. If it's not found, a 
-  warn is printed.
-  @type name: string
-  @param name: Parameter name
-  @param default: Default value for the parameter. The type should be 
-  the same as the one expected for the parameter.
-  @return: The restulting parameter
-  """
-  if not rospy.has_param(name):
-    rospy.logwarn('Parameter [%s] not found, using default: %s' % (name, default))
-  return rospy.get_param(name, default)
-
-
 class RigidBodiesPublisher(object):
   def __init__(self):
     # Read parameters to configure the calibration detector
@@ -54,23 +20,28 @@ class RigidBodiesPublisher(object):
     parent_frame = read_parameter('~parent_frame', 'left/base_link')
     optitrack_frame = read_parameter('~optitrack_frame', 'optitrack')
     rigid_bodies = read_parameter('~rigid_bodies', dict())
-    mapped_ids = rigid_bodies.values()
+    names = []
+    ids = []
+    for name,value in rigid_bodies.items():
+      # TODO: Check required fields
+      names.append(name)
+      ids.append(value['id'])
     # Setup Publishers
     pose_pub = rospy.Publisher('/optitrack/rigid_bodies', RigidBodyArray, queue_size=3)
     # Setup TF listener and broadcaster
     tf_listener = tf.TransformListener()
     tf_broadcaster = tf.TransformBroadcaster()
     ## Connect to the optitrack system
-    self._optitrack = None
+    optitrack = None
     iface = read_parameter('~iface', 'eth1')
     version = (2, 7, 0, 0)  # the latest SDK version
-    self._optitrack = rx.mkdatasock(ip_address=get_ip_address(iface))
+    optitrack = rx.mkdatasock(ip_address=get_ip_address(iface))
     rospy.loginfo("Successfully connected to optitrack")
     start_time = rospy.get_time()
     prevtime = np.ones(100)*rospy.get_time()    # Track up to 100 rigid bodies
     while not rospy.is_shutdown():
       try:
-        data = self._optitrack.recv(rx.MAX_PACKETSIZE)
+        data = optitrack.recv(rx.MAX_PACKETSIZE)
       except socket.error:
         if rospy.is_shutdown():
           return    # exit gracefully
@@ -117,9 +88,9 @@ class RigidBodiesPublisher(object):
           # TF broadcaster
           if rigid_body.tracking_valid and (rospy.get_time()-prevtime[body_id] >= (1./tf_publish_rate)):
             body_name = 'rigid_body_%d' % (body_id)
-            if body_id in mapped_ids:
-              idx = mapped_ids.index(body_id)
-              body_name = rigid_bodies.keys()[idx]
+            if body_id in ids:
+              idx = ids.index(body_id)
+              body_name = names[idx]
             tf_broadcaster.sendTransform(pos_opt, rot_opt, rospy.Time.now(), body_name, optitrack_frame)
             prevtime[body_id] = rospy.get_time()
         pose_pub.publish(array_msg)
