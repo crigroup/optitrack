@@ -3,6 +3,8 @@ optitrack
 
 ROS package developed by the [Control Robotics Intelligence Group](http://www.ntu.edu.sg/home/cuong/) from the [Nanyang Technological University, Singapore](http://www.ntu.edu.sg). This package allows to receive in ROS the rigid bodies streamed by Motive 1.7.
 
+The **hydro-devel** branch is compatible with both ROS **Hydro** and **Indigo**.
+
 ### Our setup
   * Optitrack with six Prime 17W cameras.
   * Motive 1.7.5 running on Windows 7, 64 bits.
@@ -14,15 +16,10 @@ ROS package developed by the [Control Robotics Intelligence Group](http://www.nt
   * See the installation instructions below.
   * Throughout the various files in this repository.
   
-## Build Status
+### Build Status
 
-## Ubuntu 12.04 (Precise)
+[![Build Status](https://travis-ci.org/crigroup/optitrack.png?branch=hydro-devel)](https://travis-ci.org/crigroup/optitrack)
 
-[![Build Status](https://travis-ci.org/crigroup/optitrack.png?branch=hydro-devel)](https://travis-ci.org/crigroup/optitrack/branches)
-
-## Ubuntu 14.04 (Trusty)
-
-[![Build Status](https://travis-ci.org/crigroup/optitrack.png?branch=indigo-devel)](https://travis-ci.org/crigroup/optitrack/branches)
 
 # Installation
 
@@ -89,7 +86,7 @@ $ cd ~/catkin_ws/src
 ``` 
 Clone the required repositories:
 ```
-$ git clone https://github.com/crigroup/optitrack.git -b indigo-devel
+$ git clone https://github.com/crigroup/optitrack.git -b hydro-devel
 $ git clone https://github.com/gt-ros-pkg/hrl-kdl.git -b indigo-devel
 ``` 
 Install any missing dependencies using rosdep:
@@ -102,7 +99,7 @@ Now compile your ROS workspace. e.g.
 $ cd ~/catkin_ws && catkin_make
 ``` 
 
-## Testing Installation
+## Testing the Installation
 
 Be sure to always source the appropriate ROS setup file, e.g:
 ```
