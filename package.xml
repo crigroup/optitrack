@@ -24,5 +24,9 @@
   <!-- Message generation -->
   <build_depend>message_generation</build_depend>
   <run_depend>message_runtime</run_depend>
+  
+  <export>
+    <rosdoc config="rosdoc.yaml" />
+  </export>
 
 </package>

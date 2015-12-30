@@ -1,0 +1,10 @@
+- builder: epydoc
+  output_dir: python
+  config: epydoc.config
+  homepage: https://github.com/crigroup/optitrack
+
+- builder: doxygen
+  file_patterns: '*.c *.cpp *.h *.cc *.hh *.dox'
+  homepage: https://github.com/crigroup/optitrack
+  
+

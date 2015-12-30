@@ -1,0 +1,7 @@
+/**
+\mainpage
+\htmlinclude manifest.html
+
+\b optitrack is a package developed by the <a href="http://www.ntu.edu.sg/home/cuong/">Control Robotics Intelligence Group</a> from the <a href="http://www.ntu.edu.sg/">Nanyang Technological University, Singapore</a>. This package allows to receive in ROS the rigid bodies streamed by Motive 1.7.
+
+*/
