@@ -4,7 +4,7 @@
   <arg name="iface"/>
   
   <!-- Define the transformation between optitrack and the world -->
-  <node name="world_tf_publisher" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 -1.570796 world optitrack 10" />
+  <node name="world_tf_publisher" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 1.570796 world optitrack 10" />
   
   <!-- Publish optitrack rigid bodies. Both in TF and as a PoseArray msg -->
   <node name="rigid_bodies_publisher" pkg="optitrack" type="rigid_bodies_publisher.py" output="screen">
