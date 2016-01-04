@@ -3,9 +3,11 @@ project(optitrack)
 
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
+  interactive_markers
   message_generation
   sensor_msgs
   std_msgs
+  visualization_msgs
 )
 
 catkin_python_setup()
@@ -20,9 +22,11 @@ generate_messages(DEPENDENCIES geometry_msgs sensor_msgs std_msgs)
 
 catkin_package(CATKIN_DEPENDS
   geometry_msgs
+  interactive_markers
   message_runtime
   sensor_msgs 
   std_msgs
+  visualization_msgs
 )
 
 include_directories(
