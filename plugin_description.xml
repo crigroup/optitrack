@@ -1,0 +1,10 @@
+<library path="lib/liboptitrack">
+  <class name="optitrack/RigidBodyDisplay"
+         type="optitrack::RigidBodyDisplay"
+         base_class_type="rviz::Display">
+    <description>
+      Displays rigid body markers from optitrack/RigidBodyArray messages.
+    </description>
+    <message_type>optitrack/RigidBodyArray</message_type>
+  </class>
+</library>
