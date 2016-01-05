@@ -61,7 +61,6 @@ void RigidBodyDisplay::onInitialize()
 {
   MFDClass::onInitialize();
   // Hide some controls
-  show_plane_property_->hide();
   fit_property_->hide();
 }
 
