@@ -21,10 +21,10 @@ RigidBodyDisplay::RigidBodyDisplay()
   // Properties
   id_property_ = new rviz::IntProperty( "Body id", 1,
                                         "Rigid body id used by optitrack",
-                                        this, SLOT( updateSink() ) );
+                                        this);
   diameter_property_ = new rviz::FloatProperty( "Diameter", 6,
                                                 "Marker diameter in millimeters",
-                                                this, SLOT( updateSink() ) );
+                                                this);
   hull_property_ = new rviz::StringProperty( "Convex Hull", "", 
                                               "Convex hull parameters.  (Not editable)",
                                               this);
@@ -38,7 +38,11 @@ RigidBodyDisplay::RigidBodyDisplay()
   plane_property_ = new rviz::StringProperty( "Plane", "", 
                                               "Plane to fit the selected markers.  (Not editable)",
                                               this);
-  normal_property_ = new rviz::VectorProperty( "Normal", Ogre::Vector3::UNIT_Y, "", plane_property_);
+  normal_property_ = new rviz::VectorProperty( "Normal", Ogre::Vector3::UNIT_X, "", plane_property_);
+  point_property_ = new rviz::VectorProperty( "Point", Ogre::Vector3::ZERO, "", plane_property_);
+  size_property_ = new rviz::FloatProperty( "Size", 0.3,
+                                            "Plane size in meters",
+                                            plane_property_);
   show_plane_property_ = new rviz::BoolProperty("Show", false,
                                                 "Whether or not to show the fitting plane",
                                                 plane_property_);

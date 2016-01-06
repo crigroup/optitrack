@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /RigidBodyDisplay1
+        - /RigidBodyDisplay1/Plane1
         - /RigidBodyMarkers1
       Splitter Ratio: 0.546667
     Tree Height: 775
@@ -56,8 +57,9 @@ Visualization Manager:
       Radius: 0.005
       Reference Frame: <Fixed Frame>
       Value: true
-    - Body id: 1
+    - Body id: 2
       Class: optitrack/RigidBodyDisplay
+      Diameter: 6
       Enabled: true
       Name: RigidBodyDisplay
       Topic: /optitrack/rigid_bodies
@@ -128,5 +130,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1855
-  X: 55
-  Y: -14
+  X: 65
+  Y: 24

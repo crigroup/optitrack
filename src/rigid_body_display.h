@@ -78,10 +78,12 @@ private:
   rviz::BoolProperty*   show_plane_property_;
   rviz::ColorProperty*  color_property_;
   rviz::FloatProperty*  diameter_property_;
+  rviz::FloatProperty*  size_property_;
   rviz::StringProperty* hull_property_;
   rviz::IntProperty*    id_property_;
   rviz::IntProperty*    selected_property_;
   rviz::VectorProperty* normal_property_;
+  rviz::VectorProperty* point_property_;
   rviz::StringProperty* plane_property_;
 };
 
