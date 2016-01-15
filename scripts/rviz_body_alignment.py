@@ -21,6 +21,7 @@ import rviz
 class RigidBodyAlignment(QWidget):
   frame_id = 'optitrack'
   grid_cells = 10
+  max_num_bodies = 24
   def __init__(self):
     # Initial values
     self.selected = []
@@ -144,7 +145,7 @@ class RigidBodyAlignment(QWidget):
     control.interaction_mode = InteractiveMarkerControl.NONE
     return control
   
-  def create_plane_control(self, normal, point_on_plane):
+  def create_plane_control(self, plane_eq):
     # Create the grid in the XY plane
     linspace =  np.linspace(-0.5,0.5,num=self.grid_cells) * self.plane_size
     xx, yy = np.meshgrid(linspace, linspace)
@@ -220,6 +221,9 @@ class RigidBodyAlignment(QWidget):
     if not np.isclose(1.,tr.vector_norm(self.plane_normal)):
       self.plane_normal = np.array([0,1,0])
     self.plane_point = cri.conversions.from_rviz_vector(self.point_prop.getValue())
+    self.plane_eq = np.zeros(4)
+    self.plane_eq[:3] = np.array(self.plane_normal)
+    self.plane_eq[3] = -np.dot(self.plane_normal, self.plane_point)
     self.snapshot()
   
   def id_changed(self):
@@ -234,22 +238,22 @@ class RigidBodyAlignment(QWidget):
     return hasattr(self, 'bodies')
   
   def snapshot(self):
-    # Show the fitting plane in any case
+    # Show the fitting target plane in any case
     self.server.erase('plane')
-    self.server.erase('planes')
+    self.server.erase('debug_marker')
     self.server.applyChanges()
     if self.show_plane:
       int_marker = InteractiveMarker()
       int_marker.header.frame_id = self.frame_id
       int_marker.scale = 1
       int_marker.name = 'plane'
-      control = self.create_plane_control(self.plane_normal, self.plane_point)
+      control = self.create_plane_control(self.plane_eq)
       int_marker.controls.append( control )
       self.server.insert(int_marker)
       self.server.applyChanges()
     # No rigid bodies info? Clear up the interactive markers
     if not self.received_msg():
-      for i in range(24):
+      for i in range(self.max_num_bodies):
         self.server.erase('rigid_body_%d' % i)
       self.server.applyChanges()
       return
@@ -261,31 +265,23 @@ class RigidBodyAlignment(QWidget):
         markers_to_fit.append(idx)
       markers_to_fit.sort()
       # Debug markers
-      # LSTSQ
+      # Resulting plane
       int_marker = InteractiveMarker()
       int_marker.header.frame_id = self.frame_id
       int_marker.scale = 1
-      int_marker.name = 'planes'
-      #~ normal = cri.spalg.fit_plane_lstsq(self.points[markers_to_fit])
-      
-      #~ control = self.create_plane_control(normal, ctr)
-      #~ control.markers[0].color.r, control.markers[0].color.g, control.markers[0].color.b = [0,0,1]
-      #~ int_marker.controls.append( control )
-      #~ # SVD
-      #~ normal = cri.spalg.fit_plane_svd(self.points[markers_to_fit])
-      #~ control = self.create_plane_control(normal, ctr)
-      #~ control.markers[0].color.r, control.markers[0].color.g, control.markers[0].color.b = [0,1,0]
-      #~ int_marker.controls.append( control )
+      int_marker.name = 'debug_marker'
       # Solve
-      ctr = np.mean(self.points[markers_to_fit], axis=0)
-      centered = self.points[markers_to_fit] - ctr
-      normal = cri.spalg.fit_plane_solve(centered*1000.)
-      control = self.create_plane_control(normal, ctr)
+      #~ centroid = np.mean(self.points[markers_to_fit], axis=0)
+      #~ centered = self.points[markers_to_fit] - centroid
+      #~ normal = cri.spalg.fit_plane_solve(centered)
+      #~ control = self.create_plane_control(normal, centroid)
       #~ control.markers[0].color.r, control.markers[0].color.g, control.markers[0].color.b = [1,0,0]
-      int_marker.controls.append( control )
-      int_marker.controls.append( control )
-      self.server.insert(int_marker)
-      self.server.applyChanges()
+      cri.spalg.fit_plane_optimize(self.points[markers_to_fit])
+      
+      #~ int_marker.controls.append( control )
+      #~ int_marker.controls.append( control )
+      #~ self.server.insert(int_marker)
+      #~ self.server.applyChanges()
     # Create the rigid body with the spherical markers and the convex hull
     for body in self.bodies:
       if not body.tracking_valid or body.id != self.bodyid:
