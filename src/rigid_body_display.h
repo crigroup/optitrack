@@ -85,6 +85,9 @@ private:
   rviz::VectorProperty* normal_property_;
   rviz::VectorProperty* point_property_;
   rviz::StringProperty* plane_property_;
+  rviz::StringProperty* transform_property_;
+  rviz::VectorProperty* translation_property_;
+  rviz::VectorProperty* rotation_property_;
 };
 
 } // namespace range_plugin

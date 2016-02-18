@@ -52,10 +52,17 @@ RigidBodyDisplay::RigidBodyDisplay()
   fit_property_ = new rviz::BoolProperty( "Fit", false,
                                           "Fit the selected markers to the plane.",
                                           plane_property_);
+  // Manual transformation
+  transform_property_ = new rviz::StringProperty( "Transform", "", 
+                                              "Custom transformation applied to the rigid body.  (Not editable)",
+                                              this);
+  translation_property_ = new rviz::VectorProperty( "Translation", Ogre::Vector3::ZERO, "XYZ in meters", transform_property_);
+  rotation_property_ = new rviz::VectorProperty( "Rotation", Ogre::Vector3::ZERO, "RPY in degrees", transform_property_);
   // Non editable properties
   hull_property_->setReadOnly( true );
   plane_property_->setReadOnly( true );
   selected_property_->setReadOnly( true );
+  transform_property_->setReadOnly( true );
   // Limits
   id_property_->setMin( 1 );
   id_property_->setMax( 24 );

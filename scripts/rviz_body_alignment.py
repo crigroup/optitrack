@@ -1,6 +1,8 @@
 #!/usr/bin/env python
+import argparse
 import os, rospy, signal
 import numpy as np
+import yaml
 # Convex Hull
 from scipy.spatial import ConvexHull
 # Conversions
@@ -22,14 +24,19 @@ class RigidBodyAlignment(QWidget):
   frame_id = 'optitrack'
   grid_cells = 10
   max_num_bodies = 24
-  def __init__(self):
+  min_fit_markers = 4
+  def __init__(self, config, yaml_path):
     # Initial values
     self.selected = []
     self.marker_names = []
-    self.Talign = np.eye(4)
     self.body_display = None
     self.grid_color_prop = None
     self.grid_color = np.ones(3)*0.64
+    self.translation = np.zeros(3)
+    self.rotation = np.zeros(3)
+    # Files paths
+    rviz_config = config
+    self.yaml_path = yaml_path
     # Initialize RViz
     QWidget.__init__(self)
     self.frame = rviz.VisualizationFrame()
@@ -38,7 +45,7 @@ class RigidBodyAlignment(QWidget):
     # Load configuration RViz file
     reader = rviz.YamlConfigReader()
     config = rviz.Config()
-    reader.readFile(config, '/home/fsuarez6/catkin_ws/src/optitrack/config/rviz_body_alignment.rviz')
+    reader.readFile(config, rviz_config)
     self.frame.load(config)
     self.manager = self.frame.getManager()
     # Create the layout
@@ -73,6 +80,9 @@ class RigidBodyAlignment(QWidget):
     self.plane_size_prop = self.plane_prop.subProp('Size')
     self.show_plane_prop = self.plane_prop.subProp('Show')
     self.fit_plane_prop = self.plane_prop.subProp('Fit')
+    self.transform_prop = self.body_display.subProp('Transform')
+    self.translation_prop = self.transform_prop.subProp('Translation')
+    self.rotation_prop = self.transform_prop.subProp('Rotation')
     # QT Connections
     self.id_prop.changed.connect(self.id_changed)
     self.topic_prop.changed.connect(self.topic_changed)
@@ -86,13 +96,22 @@ class RigidBodyAlignment(QWidget):
     self.plane_size_prop.changed.connect(self.plane_changed)
     self.show_plane_prop.changed.connect(self.plane_changed)
     self.fit_plane_prop.changed.connect(self.plane_changed)
+    self.translation_prop.changed.connect(self.parameter_changed)
+    self.rotation_prop.changed.connect(self.parameter_changed)
     self.plane_changed()
     self.id_changed()
     self.parameter_changed()
     self.topic_changed()
     # Shutdown hook
     rospy.on_shutdown(self.on_shutdown)
-  
+    # Load the yaml file if already exist
+    self.yaml_dict = None
+    if os.path.isfile(self.yaml_path):
+      self.yaml_dict = yaml.load(file(self.yaml_path, 'r'))
+      # TODO: Check dict consistency
+    if self.yaml_dict is None:
+      self.yaml_dict = dict()
+    
   def cb_optitrack(self, msg):
     if not self.received_msg():
       self.bodies = msg.bodies
@@ -106,16 +125,14 @@ class RigidBodyAlignment(QWidget):
         self.selected.pop(idx)
       else:
         self.selected.append(name)
-      num_selected_markers = len(self.selected)
-      if num_selected_markers >= 3:
-        self.fit_plane_prop.show()
-      else:
-        self.fit_plane_prop.hide()
-      self.selected_prop.setValue(num_selected_markers)
+      self.update_fit_plane_pop()
       self.snapshot()
   
   def clear_bodies_info(self):
     self.selected = []
+    self.update_fit_plane_pop()
+    self.fit_plane = False
+    self.fit_plane_prop.setValue(False)
     try:
       del self.bodies
     except:
@@ -149,20 +166,20 @@ class RigidBodyAlignment(QWidget):
     # Create the grid in the XY plane
     linspace =  np.linspace(-0.5,0.5,num=self.grid_cells) * self.plane_size
     xx, yy = np.meshgrid(linspace, linspace)
-    points = []
-    for i in range(self.grid_cells):  # TODO: There should be a better way to do this
+    grid = []
+    for i in range(self.grid_cells):
       # Vertical lines
-      points.append( np.array([xx[0,i], yy[0,i], 0]) )
-      points.append( np.array([xx[-1,i], yy[-1,i], 0]) )
+      grid.append( np.array([xx[0,i], yy[0,i], 0]) )
+      grid.append( np.array([xx[-1,i], yy[-1,i], 0]) )
       # Horizontal lines
-      points.append( np.array([xx[i,0], yy[i,0], 0]) )
-      points.append( np.array([xx[i,-1], yy[i,-1], 0]) )
-    points = np.array(points)
-    # Align the grid with the plane normal
-    R = cri.spalg.rotation_matrix_from_axes(0, normal, oldaxis=[0,0,1])
-    #~ aligned_points = np.dot(R[:3,:3], points.T).T + point_on_plane
-    #~ points += point_on_plane
-    aligned_points = np.dot(R[:3,:3], points.T).T + point_on_plane
+      grid.append( np.array([xx[i,0], yy[i,0], 0]) )
+      grid.append( np.array([xx[i,-1], yy[i,-1], 0]) )
+    grid = np.array(grid)
+    # Project the grid onto the fitting plane
+    T = cri.spalg.transformation_between_planes(plane_eq, [0,0,1,0])
+    R = T[:3,:3]
+    t = T[:3,3]
+    aligned_grid = np.dot(R, grid.T).T + t
     # Control
     control =  InteractiveMarkerControl()
     control.always_visible = True
@@ -174,7 +191,7 @@ class RigidBodyAlignment(QWidget):
     marker.color.g = self.grid_color[1]
     marker.color.b = self.grid_color[2]
     marker.color.a = 0.75
-    for point in aligned_points:
+    for point in aligned_grid:
       marker.points.append( cri.conversions.to_point(point) )
     control.markers.append(marker)
     control.interaction_mode = InteractiveMarkerControl.NONE
@@ -193,13 +210,19 @@ class RigidBodyAlignment(QWidget):
     marker.pose.position = cri.conversions.to_point(position)
     return marker
   
-  def create_sphere_control(self, position, selected=False):
+  def create_sphere_control(self, position, selected=False, interactive=True):
     control =  InteractiveMarkerControl()
     control.always_visible = True
-    color = [1, 0, 0] if selected else [0.5, 0.5, 0.5]
+    if interactive:
+      color = [1, 0, 0] if selected else [0.5, 0.5, 0.5]
+    else:
+      color = [1, 1, 0]
     marker = self.create_sphere_marker(position, color)
     control.markers.append(marker)
-    control.interaction_mode = InteractiveMarkerControl.BUTTON
+    if interactive:
+      control.interaction_mode = InteractiveMarkerControl.BUTTON
+    else:
+      control.interaction_mode = InteractiveMarkerControl.NONE
     return control
   
   def parameter_changed(self):
@@ -210,6 +233,9 @@ class RigidBodyAlignment(QWidget):
     if self.grid_color_prop is not None:
       color = cri.conversions.from_rviz_vector(self.grid_color_prop.getValue())
       self.grid_color = color / 255.
+    self.translation = cri.conversions.from_rviz_vector(self.translation_prop.getValue())
+    self.rotation = cri.conversions.from_rviz_vector(self.rotation_prop.getValue())
+    self.rotation *= np.pi / 180.
     self.snapshot()
   
   def plane_changed(self):
@@ -221,9 +247,9 @@ class RigidBodyAlignment(QWidget):
     if not np.isclose(1.,tr.vector_norm(self.plane_normal)):
       self.plane_normal = np.array([0,1,0])
     self.plane_point = cri.conversions.from_rviz_vector(self.point_prop.getValue())
-    self.plane_eq = np.zeros(4)
-    self.plane_eq[:3] = np.array(self.plane_normal)
-    self.plane_eq[3] = -np.dot(self.plane_normal, self.plane_point)
+    self.fit_plane_eq = np.zeros(4)
+    self.fit_plane_eq[:3] = np.array(self.plane_normal)
+    self.fit_plane_eq[3] = -np.dot(self.plane_normal, self.plane_point)
     self.snapshot()
   
   def id_changed(self):
@@ -238,16 +264,19 @@ class RigidBodyAlignment(QWidget):
     return hasattr(self, 'bodies')
   
   def snapshot(self):
+    self.Talign = tr.euler_matrix(*self.rotation, axes='sxyz')
+    self.Talign[:3,3] = self.translation
     # Show the fitting target plane in any case
-    self.server.erase('plane')
-    self.server.erase('debug_marker')
+    self.server.erase('markers_plane')
+    self.server.erase('fitting_plane')
     self.server.applyChanges()
     if self.show_plane:
+      # TODO: Show the plane center
       int_marker = InteractiveMarker()
       int_marker.header.frame_id = self.frame_id
       int_marker.scale = 1
-      int_marker.name = 'plane'
-      control = self.create_plane_control(self.plane_eq)
+      int_marker.name = 'fitting_plane'
+      control = self.create_plane_control(self.fit_plane_eq)
       int_marker.controls.append( control )
       self.server.insert(int_marker)
       self.server.applyChanges()
@@ -258,30 +287,27 @@ class RigidBodyAlignment(QWidget):
       self.server.applyChanges()
       return
     # Fit the selected markers to the plane
-    if self.fit_plane and len(self.selected) >= 3:
+    if self.fit_plane and len(self.selected) >= self.min_fit_markers:
       markers_to_fit = []
       for name in self.selected:
         idx = self.marker_names.index(name)
         markers_to_fit.append(idx)
       markers_to_fit.sort()
-      # Debug markers
-      # Resulting plane
+      # Markers plane
       int_marker = InteractiveMarker()
       int_marker.header.frame_id = self.frame_id
       int_marker.scale = 1
-      int_marker.name = 'debug_marker'
-      # Solve
-      #~ centroid = np.mean(self.points[markers_to_fit], axis=0)
-      #~ centered = self.points[markers_to_fit] - centroid
-      #~ normal = cri.spalg.fit_plane_solve(centered)
-      #~ control = self.create_plane_control(normal, centroid)
-      #~ control.markers[0].color.r, control.markers[0].color.g, control.markers[0].color.b = [1,0,0]
-      cri.spalg.fit_plane_optimize(self.points[markers_to_fit])
-      
-      #~ int_marker.controls.append( control )
-      #~ int_marker.controls.append( control )
-      #~ self.server.insert(int_marker)
-      #~ self.server.applyChanges()
+      int_marker.name = 'markers_plane'
+      markers_plane_eq = cri.spalg.fit_plane_optimize(self.points[markers_to_fit])
+      control = self.create_plane_control(markers_plane_eq)
+      control.markers[0].color.r, control.markers[0].color.g, control.markers[0].color.b = [0,0,1]
+      int_marker.controls.append( control )
+      self.server.insert(int_marker)
+      self.server.applyChanges()
+      # Save fit results
+      Tfit = cri.spalg.transformation_between_planes(self.fit_plane_eq, markers_plane_eq)
+      self.Talign = np.dot(self.Talign, Tfit)
+      self.update_yaml_file()
     # Create the rigid body with the spherical markers and the convex hull
     for body in self.bodies:
       if not body.tracking_valid or body.id != self.bodyid:
@@ -294,7 +320,8 @@ class RigidBodyAlignment(QWidget):
       self.points = (markers - centroid)
       R = self.Talign[:3,:3]
       t = self.Talign[:3,3]
-      aligned = np.dot(R,self.points.T).T + t
+      aligned = np.dot(R, self.points.T).T + t
+      pivot = t
       # Create interactive marker
       int_marker = InteractiveMarker()
       int_marker.header.frame_id = self.frame_id
@@ -308,6 +335,9 @@ class RigidBodyAlignment(QWidget):
         control = self.create_sphere_control(position, selected=selected)
         control.name = name
         int_marker.controls.append(control)
+      # Add rigid body centroid
+      control = self.create_sphere_control(pivot, interactive=False)
+      int_marker.controls.append(control)
       if self.show_hull:
         hull = self.create_convex_hull(aligned)
         int_marker.controls.append(hull)
@@ -321,15 +351,47 @@ class RigidBodyAlignment(QWidget):
       pass
     self.clear_bodies_info()
     self.sub = rospy.Subscriber(self.topic_prop.getValue(), RigidBodyArray, self.cb_optitrack)
+  
+  def update_fit_plane_pop(self):
+    num_selected_markers = len(self.selected)
+    if num_selected_markers >= self.min_fit_markers:
+      self.fit_plane_prop.show()
+    else:
+      self.fit_plane_prop.hide()
+    self.selected_prop.setValue(num_selected_markers)
+  
+  def update_yaml_file(self):
+    scriptname = os.path.basename(__file__)
+    header = '# Translations and rotations were autogenerated by the script %s\n' % scriptname
+    header += '# EDITING THOSE FIELDS BY HAND IS NOT RECOMMENDED\n\n'
+    Toffset = cri.spalg.transform_inv(self.Talign)
+    quaternion = tr.quaternion_from_matrix(Toffset)
+    translation = Toffset[:3,3]
+    bodyname = 'rigid_body_%d' % self.bodyid
+    if not self.yaml_dict.has_key(bodyname):
+      self.yaml_dict[bodyname] = dict()
+    self.yaml_dict[bodyname]['rotation'] = quaternion.flatten().tolist()
+    self.yaml_dict[bodyname]['translation'] = translation.flatten().tolist()
+    with open(self.yaml_path, "w") as f:
+      f.write(header)
+      yaml.safe_dump(self.yaml_dict, f)
+    rospy.loginfo('Updated initial transformation for [%s]' % bodyname)
+    rospy.loginfo('File [%s] has been updated' % self.yaml_path)
+
 
 if __name__ == '__main__':
   node_name = os.path.splitext(os.path.basename(__file__))[0]
   rospy.init_node(node_name)
   rospy.loginfo('Starting %r node' % node_name)
-  app = QApplication(sys.argv)
-  viz = RigidBodyAlignment()
+  # Parse the arguments
+  parser = argparse.ArgumentParser(description='This script helps you to determine the initial orientation of Optitrack rigid bodies')
+  parser.add_argument('-c','--config', type=str, required=True,
+                        help='Path to the RViz configuration file')
+  parser.add_argument('-y', '--yaml', type=str, required=True,
+                        help='Path to the yaml file where the initial transformations will be stored/updated')
+  args = parser.parse_args(rospy.myargv()[1:])
+  app = QApplication(rospy.myargv())
+  viz = RigidBodyAlignment(args.config, args.yaml)
   viz.show()
-  import IPython
-  IPython.embed()
-  #~ app.exec_()
+  app.exec_()
   rospy.loginfo('Shuting down %r node' % node_name)

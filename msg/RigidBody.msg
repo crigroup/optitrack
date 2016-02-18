@@ -3,4 +3,5 @@ int32                 id
 bool                  tracking_valid
 float64               mrk_mean_error
 geometry_msgs/Pose    pose
+geometry_msgs/Pose    offset
 geometry_msgs/Point[] markers

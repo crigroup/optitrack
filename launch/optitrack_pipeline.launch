@@ -8,8 +8,10 @@
   
   <!-- Publish optitrack rigid bodies. Both in TF and as a PoseArray msg -->
   <node name="rigid_bodies_publisher" pkg="optitrack" type="rigid_bodies_publisher.py" output="screen">
+    <param name="iface"             type="string" value="$(arg iface)" />
+    <param name="frame_id"   type="string" value="optitrack" />
+    <param name="tf_publish_rate"   type="double" value="50." />
     <rosparam file="$(find optitrack)/config/rigid_bodies.yaml" command="load" />
-    <param name="iface"  type="string" value="$(arg iface)" />
   </node>
   
   <!-- RVIZ -->
