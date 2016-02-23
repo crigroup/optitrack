@@ -2,6 +2,7 @@
 <launch>
   
   <arg name="iface"/>
+  <arg name="rviz"  default="True"/>
   
   <!-- Define the transformation between optitrack and the world -->
   <node name="world_tf_publisher" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 1.570796 world optitrack 10" />
@@ -15,6 +16,8 @@
   </node>
   
   <!-- RVIZ -->
-  <node name="rviz_node" pkg="rviz" type="rviz" args="-d $(find optitrack)/config/optitrack.rviz" />
+  <group if="$(arg rviz)">
+    <node name="rviz_node" pkg="rviz" type="rviz" args="-d $(find optitrack)/config/optitrack.rviz" />
+  </group>
   
 </launch>

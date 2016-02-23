@@ -25,7 +25,7 @@ class RigidBodyAlignment(QWidget):
   grid_cells = 10
   max_num_bodies = 24
   min_fit_markers = 4
-  def __init__(self, config, yaml_path):
+  def __init__(self, config, yaml_path, debug):
     # Initial values
     self.selected = []
     self.marker_names = []
@@ -34,6 +34,7 @@ class RigidBodyAlignment(QWidget):
     self.grid_color = np.ones(3)*0.64
     self.translation = np.zeros(3)
     self.rotation = np.zeros(3)
+    self.debug = debug
     # Files paths
     rviz_config = config
     self.yaml_path = yaml_path
@@ -307,7 +308,8 @@ class RigidBodyAlignment(QWidget):
       # Save fit results
       Tfit = cri.spalg.transformation_between_planes(self.fit_plane_eq, markers_plane_eq)
       self.Talign = np.dot(self.Talign, Tfit)
-      self.update_yaml_file()
+      if not self.debug:
+        self.update_yaml_file()
     # Create the rigid body with the spherical markers and the convex hull
     for body in self.bodies:
       if not body.tracking_valid or body.id != self.bodyid:
@@ -387,11 +389,13 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='This script helps you to determine the initial orientation of Optitrack rigid bodies')
   parser.add_argument('-c','--config', type=str, required=True,
                         help='Path to the RViz configuration file')
+  parser.add_argument('-d','--debug', action='store_true',
+                        help='If set, will not store/update the yaml file')
   parser.add_argument('-y', '--yaml', type=str, required=True,
                         help='Path to the yaml file where the initial transformations will be stored/updated')
   args = parser.parse_args(rospy.myargv()[1:])
   app = QApplication(rospy.myargv())
-  viz = RigidBodyAlignment(args.config, args.yaml)
+  viz = RigidBodyAlignment(args.config, args.yaml, args.debug)
   viz.show()
   app.exec_()
   rospy.loginfo('Shuting down %r node' % node_name)
