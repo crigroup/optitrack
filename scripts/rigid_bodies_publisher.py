@@ -40,7 +40,7 @@ class RigidBodiesPublisher(object):
     tf_broadcaster = tf.TransformBroadcaster()
     # Connect to the optitrack system
     iface = read_parameter('~iface', 'eth1')
-    version = (2, 7, 0, 0)  # the latest SDK version
+    version = (2, 9, 0, 0)  # the latest SDK version
     optitrack = rx.mkdatasock(ip_address=get_ip_address(iface))
     rospy.loginfo('Successfully connected to optitrack')
     # Get transformation from the world to optitrack frame
