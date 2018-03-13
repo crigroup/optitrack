@@ -32,7 +32,7 @@ class RigidBodiesPublisher(object):
     ids = []
     for name,value in rigid_bodies.items():
       names.append(name)
-      ids.append(value)
+      ids.append(value["id"])
     # Setup Publishers
     pose_pub = rospy.Publisher('/optitrack/rigid_bodies', RigidBodyArray, queue_size=3)
     # Setup TF listener and broadcaster
@@ -69,7 +69,7 @@ class RigidBodiesPublisher(object):
         version = packet.natnet_version
         rospy.loginfo('NatNet version received: ' + str(version))
       if type(packet) in [rx.SenderData, rx.ModelDefs, rx.FrameOfData]:
-        # Optitrack gives the position of the centroid. 
+        # Optitrack gives the position of the centroid.
         array_msg = RigidBodyArray()
         for i, rigid_body in enumerate(packet.rigid_bodies):
           body_id = rigid_body.id
